@@ -9,45 +9,46 @@ import static org.junit.Assert.assertEquals;
 public class TokenizerTest {
 
     private final CsvParser parser = new CsvParser();
+    private final CsvParser.Session session = parser.new Session();
 
     @Test
     public void testSimpleCase() throws ParseException {
-        final String[] tokens = parser.getTokens("a,b,c,d");
+        final String[] tokens = session.getTokens("a,b,c,d");
         assertEquals(4, tokens.length);
         assertArrayEquals(new String[] { "a", "b", "c", "d" }, tokens);
     }
 
     @Test
     public void testDelimited() throws ParseException {
-        final String[] tokens = parser.getTokens("a,b,\"c,c\",d");
+        final String[] tokens = session.getTokens("a,b,\"c,c\",d");
         assertEquals(4, tokens.length);
         assertArrayEquals(new String[] { "a", "b", "c,c", "d" }, tokens);
     }
 
     @Test
     public void testDelimiterInToken() throws ParseException {
-        final String[] tokens = parser.getTokens("a,b\"\"b,c,d");
+        final String[] tokens = session.getTokens("a,b\"\"b,c,d");
         assertEquals(4, tokens.length);
         assertArrayEquals(new String[] { "a", "b\"b", "c", "d" }, tokens);
     }
 
     @Test
     public void testMultipleDelimiterInToken() throws ParseException {
-        final String[] tokens = parser.getTokens("a,b\"\"b\"\"b,c,d");
+        final String[] tokens = session.getTokens("a,b\"\"b\"\"b,c,d");
         assertEquals(4, tokens.length);
         assertArrayEquals(new String[] { "a", "b\"b\"b", "c", "d" }, tokens);
     }
 
     @Test
     public void testDelimiterInDelimitedValue() throws ParseException {
-        final String[] tokens = parser.getTokens("a,\"b\"\"b\",c,d");
+        final String[] tokens = session.getTokens("a,\"b\"\"b\",c,d");
         assertEquals(4, tokens.length);
         assertArrayEquals(new String[] { "a", "b\"b", "c", "d" }, tokens);
     }
 
     @Test
     public void testManyDelimiters() throws ParseException {
-        final String[] tokens = parser.getTokens("a,\"\"\"\"\"\",c,d");
+        final String[] tokens = session.getTokens("a,\"\"\"\"\"\",c,d");
         assertEquals(4, tokens.length);
         assertArrayEquals(new String[] { "a", "\"\"", "c", "d" }, tokens);
     }

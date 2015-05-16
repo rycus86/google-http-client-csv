@@ -21,8 +21,6 @@ public class CsvParser implements ObjectParser {
     private final char separator;
     private final char delimiter;
 
-    private final StringBuilder buffer = new StringBuilder();
-
     public CsvParser() {
         this(',', '"');
     }
@@ -78,22 +76,22 @@ public class CsvParser implements ObjectParser {
                 throw new IOException(ex);
             }
 
-            final List<Object> items = new LinkedList<>();
-
             final BufferedReader reader = new BufferedReader(source);
+            final Session session = new Session();
 
             final String header = trimHeader(reader.readLine());
-            final String[] headers;
             try {
-                headers = getTokens(header);
+                session.init(header);
             } catch (ParseException ex) {
                 throw new IOException("Failed to parse CSV header: " + header, ex);
             }
 
+            final List<Object> items = new LinkedList<>();
+
             String line;
             while ((line = reader.readLine()) != null) {
                 try {
-                    final Object parsed = parser.parseObject(toValues(headers, line));
+                    final Object parsed = parser.parseObject(session.toValues(line));
                     items.add(parsed);
                 } catch (ParseException ex) {
                     throw new IOException(ex);
@@ -115,69 +113,81 @@ public class CsvParser implements ObjectParser {
         }
     }
 
-    Map<String, String> toValues(final String[] headers, final String line) throws ParseException {
-        final String[] params = getTokens(line);
-
-        final Map<String, String> values = new HashMap<>();
-        for (int idx = 0; idx < Math.min(headers.length, params.length); idx++) {
-            values.put(headers[idx], params[idx]);
-        }
-
-        return values;
-    }
-
-    String[] getTokens(final String source) throws ParseException {
-        final List<String> tokens = new LinkedList<>();
-
-        buffer.setLength(0);
-
-        final int length = source.length();
-
-        boolean inString = false;
-        boolean wasDelimiter = false;
-
-        for (int index = 0; index < length; index++) {
-            final char ch = source.charAt(index);
-
-            if (ch == delimiter) {
-                if (wasDelimiter && !inString) {
-                    buffer.append(ch);
-                }
-
-                inString = !inString;
-                wasDelimiter = true;
-            } else {
-                if (ch == separator) {
-                    if (inString) {
-                        buffer.append(ch);
-                    } else {
-                        tokens.add(buffer.toString());
-                        buffer.setLength(0);
-                    }
-                } else {
-                    if (wasDelimiter && !inString) {
-                        buffer.append(delimiter);
-                    }
-
-                    buffer.append(ch);
-                }
-
-                wasDelimiter = false;
-            }
-        }
-
-        tokens.add(buffer.toString());
-        buffer.setLength(0);
-
-        return tokens.toArray(new String[tokens.size()]);
-    }
-
     private static String trimHeader(final String original) {
         if (original != null && original.charAt(0) == 0xFEFF) {
             return original.substring(1);
         } else {
             return original;
         }
+    }
+
+    class Session {
+
+        private final StringBuilder buffer = new StringBuilder();
+
+        private String[] headers;
+
+        void init(final String header) throws ParseException {
+            this.headers = getTokens(trimHeader(header));
+        }
+
+        Map<String, String> toValues(final String line) throws ParseException {
+            final String[] params = getTokens(line);
+
+            final Map<String, String> values = new HashMap<>();
+            for (int idx = 0; idx < Math.min(headers.length, params.length); idx++) {
+                values.put(headers[idx], params[idx]);
+            }
+
+            return values;
+        }
+
+        String[] getTokens(final String source) throws ParseException {
+            final List<String> tokens = new LinkedList<>();
+
+            buffer.setLength(0);
+
+            final int length = source.length();
+
+            boolean inString = false;
+            boolean wasDelimiter = false;
+
+            for (int index = 0; index < length; index++) {
+                final char ch = source.charAt(index);
+
+                if (ch == delimiter) {
+                    if (wasDelimiter && !inString) {
+                        buffer.append(ch);
+                    }
+
+                    inString = !inString;
+                    wasDelimiter = true;
+                } else {
+                    if (ch == separator) {
+                        if (inString) {
+                            buffer.append(ch);
+                        } else {
+                            tokens.add(buffer.toString());
+                            buffer.setLength(0);
+                        }
+                    } else {
+                        if (wasDelimiter && !inString) {
+                            buffer.append(delimiter);
+                        }
+
+                        buffer.append(ch);
+                    }
+
+                    wasDelimiter = false;
+                }
+            }
+
+            tokens.add(buffer.toString());
+            buffer.setLength(0);
+
+            return tokens.toArray(new String[tokens.size()]);
+        }
+
     }
 
     private static class ParserRegistry {
