@@ -7,7 +7,7 @@
 
     <groupId>hu.rycus</groupId>
     <artifactId>google-http-client-csv</artifactId>
-    <version>1.0.1</version>
+    <version>1.0.2</version>
 
     <packaging>jar</packaging>
 
@@ -36,6 +36,12 @@
             <groupId>com.google.http-client</groupId>
             <artifactId>google-http-client</artifactId>
             <version>LATEST</version>
+        </dependency>
+        <dependency>
+            <groupId>junit</groupId>
+            <artifactId>junit</artifactId>
+            <scope>test</scope>
+            <version>4.12</version>
         </dependency>
     </dependencies>
 

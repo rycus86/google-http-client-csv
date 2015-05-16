@@ -17,7 +17,7 @@ final Item[] items = response.parseAs(Item[].class);
   <dependency>
     <groupId>hu.rycus</groupId>
     <artifactId>google-http-client-csv</artifactId>
-    <version>1.0.1</version>
+    <version>1.0.2</version>
   </dependency>
   ...
 <dependencies>

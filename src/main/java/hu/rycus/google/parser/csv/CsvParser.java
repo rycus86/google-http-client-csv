@@ -21,6 +21,8 @@ public class CsvParser implements ObjectParser {
     private final char separator;
     private final char delimiter;
 
+    private final StringBuilder buffer = new StringBuilder();
+
     public CsvParser() {
         this(',', '"');
     }
@@ -45,6 +47,19 @@ public class CsvParser implements ObjectParser {
             return parseAndClose(new InputStreamReader(inputStream, charset), type);
         } finally {
             inputStream.close();
+        }
+    }
+
+    @Override
+    public Object parseAndClose(final Reader reader, final Type type) throws IOException {
+        try {
+            if (!(type instanceof Class)) {
+                throw new IOException("Class argument expected for Type");
+            }
+
+            return parseAndClose(reader, (Class) type);
+        } finally {
+            reader.close();
         }
     }
 
@@ -100,7 +115,7 @@ public class CsvParser implements ObjectParser {
         }
     }
 
-    private Map<String, String> toValues(final String[] headers, final String line) throws ParseException {
+    Map<String, String> toValues(final String[] headers, final String line) throws ParseException {
         final String[] params = getTokens(line);
 
         final Map<String, String> values = new HashMap<>();
@@ -111,40 +126,48 @@ public class CsvParser implements ObjectParser {
         return values;
     }
 
-    private String[] getTokens(final String source) throws ParseException {
+    String[] getTokens(final String source) throws ParseException {
         final List<String> tokens = new LinkedList<>();
 
-        String remaining = source;
-        while (!remaining.isEmpty()) {
-            if (remaining.charAt(0) == delimiter) {
-                remaining = remaining.substring(1);
+        buffer.setLength(0);
 
-                final int nextDelimiter = remaining.indexOf(delimiter);
-                if (nextDelimiter > -1) {
-                    final String token = remaining.substring(0, nextDelimiter);
-                    tokens.add(token);
+        final int length = source.length();
 
-                    remaining = remaining.substring(nextDelimiter + 1);
-                } else {
-                    throw new ParseException("Failed to parse line: " + source);
+        boolean inString = false;
+        boolean wasDelimiter = false;
+
+        for (int index = 0; index < length; index++) {
+            final char ch = source.charAt(index);
+
+            if (ch == delimiter) {
+                if (wasDelimiter && !inString) {
+                    buffer.append(ch);
                 }
 
-                if (remaining.charAt(0) == separator) {
-                    remaining = remaining.substring(1);
-                }
+                inString = !inString;
+                wasDelimiter = true;
             } else {
-                final int nextSeparator = remaining.indexOf(separator);
-                if (nextSeparator > -1) {
-                    final String token = remaining.substring(0, nextSeparator);
-                    tokens.add(token);
-
-                    remaining = remaining.substring(nextSeparator + 1);
+                if (ch == separator) {
+                    if (inString) {
+                        buffer.append(ch);
+                    } else {
+                        tokens.add(buffer.toString());
+                        buffer.setLength(0);
+                    }
                 } else {
-                    tokens.add(remaining);
-                    break;
+                    if (wasDelimiter && !inString) {
+                        buffer.append(delimiter);
+                    }
+
+                    buffer.append(ch);
                 }
+
+                wasDelimiter = false;
             }
         }
+
+        tokens.add(buffer.toString());
+        buffer.setLength(0);
 
         return tokens.toArray(new String[tokens.size()]);
     }
@@ -154,19 +177,6 @@ public class CsvParser implements ObjectParser {
             return original.substring(1);
         } else {
             return original;
-        }
-    }
-
-    @Override
-    public Object parseAndClose(final Reader reader, final Type type) throws IOException {
-        try {
-            if (!(type instanceof Class)) {
-                throw new IOException("Class argument expected for Type");
-            }
-
-            return parseAndClose(reader, (Class) type);
-        } finally {
-            reader.close();
         }
     }
 
